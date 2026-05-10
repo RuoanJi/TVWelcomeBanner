@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>动态欢迎横幅 - 周期循环版</title>
+    <title>无限行自适应欢迎横幅</title>
     <style>
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
             overflow: hidden;
             background-color: #8b0000;
             display: flex;
@@ -26,10 +24,11 @@
             z-index: -1;
         }
 
-        .content-wrapper {
+        /* 自动布局容器 */
+        #wrapper {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-evenly; /* 均匀分布每一行 */
             align-items: center;
             width: 95vw;
             height: 90vh;
@@ -46,33 +45,22 @@
             color: transparent;
             -webkit-background-clip: text;
             background-clip: text;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 8px 15px rgba(0,0,0,0.5));
             
-            /* 金色流光动画：一直存在 */
-            animation: shine 4s linear infinite;
-            
-            transform-origin: center;
-            display: inline-block;
-            opacity: 0; /* 初始透明 */
-        }
-
-        /* 核心逻辑：定义一个 10 秒的呼吸动画 */
-        /* 0-15% 淡入, 85-100% 淡出 */
-        .breathe-animation {
+            /* 10秒周期呼吸动画 */
             animation: shine 4s linear infinite, breatheEffect 10s ease-in-out infinite;
+            opacity: 0;
+            transform-origin: center;
         }
 
         @keyframes breatheEffect {
-            0%   { opacity: 0; transform: scale(0.9); }
-            10%  { opacity: 1; transform: scale(1); }
-            90%  { opacity: 1; transform: scale(1); }
+            0% { opacity: 0; transform: scale(0.9); }
+            10% { opacity: 1; transform: scale(1); }
+            90% { opacity: 1; transform: scale(1); }
             100% { opacity: 0; transform: scale(1.05); }
         }
 
-        @keyframes shine {
-            to { background-position: 200% center; }
-        }
-
+        @keyframes shine { to { background-position: 200% center; } }
         @keyframes pulseBG {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -82,56 +70,51 @@
 <body>
 
     <div class="background-layer"></div>
-
-    <div class="content-wrapper" id="wrapper">
-        <div id="line1" class="text-line"></div>
-        <div id="line2" class="text-line"></div>
-    </div>
+    <div id="wrapper"></div>
 
     <script>
         function init() {
             const urlParams = new URLSearchParams(window.location.search);
-            const defaultContent = "热烈欢迎阿比老师莅临指导|预祝我队演出取得圆满成功";
+            // 默认文案，你可以随意增加行数，用 | 隔开
+            const defaultContent = "热烈欢迎阿比老师莅临指导|预祝我队演出取得圆满成功|2026年5月9日";
             const rawText = urlParams.get('text') || defaultContent;
-            const parts = rawText.split('|');
+            const lines = rawText.split('|');
             
-            const l1 = document.getElementById('line1');
-            const l2 = document.getElementById('line2');
+            const wrapper = document.getElementById('wrapper');
+            wrapper.innerHTML = ''; // 清空内容
 
-            l1.innerText = parts[0];
-            if (parts.length > 1) {
-                l2.innerText = parts[1];
-            } else {
-                l2.style.display = 'none';
-            }
+            // 1. 根据行数计算初始最大高度（vw）
+            // 如果只有1行，字可以很大；如果5行，字自然要小
+            const baseFontSize = Math.min(15, 80 / lines.length);
 
-            // 自适应缩放逻辑
+            lines.forEach((content, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'text-line';
+                lineDiv.innerText = content;
+                // 给每一行增加一点点动画延迟，形成交替浮现感
+                lineDiv.style.animationDelay = `${index * 0.2}s, ${0}s`; 
+                wrapper.appendChild(lineDiv);
+            });
+
+            // 2. 自适应缩放函数
             function rescale() {
-                const lines = [l1];
-                if (parts.length > 1) lines.push(l2);
-                lines.forEach(line => {
-                    line.style.fontSize = "15vw"; 
-                    const containerWidth = document.getElementById('wrapper').offsetWidth;
+                const domLines = document.querySelectorAll('.text-line');
+                domLines.forEach(line => {
+                    line.style.fontSize = baseFontSize + "vw"; 
+                    const containerWidth = wrapper.offsetWidth;
                     const textWidth = line.scrollWidth;
+                    
+                    // 如果单行太长，继续缩小
                     if (textWidth > containerWidth) {
                         const ratio = (containerWidth / textWidth) * 0.95;
-                        line.style.fontSize = (15 * ratio) + "vw";
+                        line.style.fontSize = (baseFontSize * ratio) + "vw";
                     }
                 });
             }
 
+            // 初始执行
             rescale();
             window.addEventListener('resize', rescale);
-
-            // 触发动画循环
-            // 我们先移除类再添加，或者直接利用 CSS infinite
-            l1.classList.add('breathe-animation');
-            if (parts.length > 1) {
-                // 第二行延迟一点点，增加灵动感
-                setTimeout(() => {
-                    l2.classList.add('breathe-animation');
-                }, 300);
-            }
         }
 
         window.onload = init;
